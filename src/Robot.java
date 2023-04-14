@@ -22,28 +22,42 @@ public class Robot {
                     } else {
                         sizeToFreq.put(maxSize, 1);
                     }
+                    sizeToFreq.notify();
                 }
             };
             Thread myThread = new Thread(runnable);
             threads.add(myThread);
-            myThread.start();
         }
+
+        Runnable runnable1 = () -> {
+            while (!Thread.interrupted()) {
+                synchronized (sizeToFreq) {
+                    try {
+                        sizeToFreq.wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                        Thread.currentThread().interrupt();
+                    }
+                    conclusion();
+                }
+            }
+        };
+
+        Thread thread1 = new Thread(runnable1);
+        thread1.start();
+
         for (Thread thread : threads) {
+            thread.start();
             thread.join();
         }
-        conclusion();
+        thread1.interrupt();
     }
 
-    public static void conclusion (){
-            System.out.println("Самое частое количество повторений "
-                    + sizeToFreq.keySet().stream().max(Comparator.comparing(sizeToFreq::get)).orElse(null)
-                    + " (встретилось " + Collections.max(sizeToFreq.values()) + " раз)");
-
-            System.out.println("Другие размеры:");
-            for (Map.Entry<Integer, Integer> value : sizeToFreq.entrySet()) {
-                System.out.println("- " + value.getKey() + " (" + value.getValue() + " раз)");
-            }
-        }
+    public static void conclusion() {
+        System.out.println("Самое частое количество повторений "
+                + sizeToFreq.keySet().stream().max(Comparator.comparing(sizeToFreq::get)).orElse(null)
+                + " (встретилось " + Collections.max(sizeToFreq.values()) + " раз)");
+    }
 
     public static String generateRoute(String letters, int length) {
         Random random = new Random();
@@ -53,5 +67,4 @@ public class Robot {
         }
         return route.toString();
     }
-
 }
